@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 #   b0z(z) = c''(z) = N2
 
 # Control parameters
-Nx, Ny, Nz = 128, 128, 64
+Nx, Ny, Nz = 256, 256, 64
+mesh = (16, 12)
 A = 1000 # Aspect ratio: L / H
 An = 3e4 # Diffusion anisotrophy: κh / κv
 Ro = 0.25 # Rossby number: S / f
@@ -36,8 +37,10 @@ Ri = 1000 / Ro**2 # Richardson number: N^2 / S^2
 D1 = 0.0016 # Linear drag parameter: k1 / f H
 D2 = 0 # Quadratic drag parameter: k2
 timestepper = "RK222"
-stop_sim_time = 1000
+stop_sim_time = 50000
 max_dt = 10
+checkpoints_sim_dt = 10000
+slices_sim_dt = 100
 
 # Fixed parameters
 H = 1 # Domain height
@@ -59,7 +62,7 @@ start_init_time = time.time()
 x_basis = de.Fourier('x', Nx, interval=(0, L), dealias=3/2)
 y_basis = de.Fourier('y', Ny, interval=(0, L), dealias=3/2)
 z_basis = de.Chebyshev('z', Nz, interval=(0, H), dealias=3/2)
-domain = de.Domain([x_basis, y_basis, z_basis], grid_dtype=np.float64)
+domain = de.Domain([x_basis, y_basis, z_basis], grid_dtype=np.float64, mesh=mesh)
 x, y, z = domain.all_grids()
 
 # Problem
@@ -89,6 +92,7 @@ problem.substitutions['vy'] = "dy(v)"
 problem.substitutions['wx'] = "dx(w)"
 problem.substitutions['wy'] = "dy(w)"
 problem.substitutions['ωz'] = "vx - uy"
+problem.substitutions['left_mag_uh'] = "sqrt(left(u)**2 + left(v)**2)"
 problem.add_equation("ux + vy + wz = 0")
 problem.add_equation("dt(b) - κh*(dx(bx) + dy(by)) - κv*dz(bz) + u0*bx + v*b0y + w*b0z    = - (u*bx + v*by + w*bz)")
 problem.add_equation("dt(u) - νh*(dx(ux) + dy(uy)) - νv*dz(uz) + px - f*v + u0*ux + w*u0z = - (u*ux + v*uy + w*uz)")
@@ -100,9 +104,9 @@ problem.add_equation("vz - dz(v) = 0")
 problem.add_equation("wz - dz(w) = 0")
 problem.add_bc("left(bz) = 0")
 problem.add_bc("right(bz) = 0")
-problem.add_bc("left(νv*uz - k1*u) = left(k2*u**2)")
+problem.add_bc("left(νv*uz - k1*u) = k2*left_mag_uh*left(u)")
 problem.add_bc("right(uz) = 0")
-problem.add_bc("left(νv*vz - k1*v) = left(k2*v**2)")
+problem.add_bc("left(νv*vz - k1*v) = k2*left_mag_uh*left(v)")
 problem.add_bc("right(vz) = 0")
 problem.add_bc("left(w) = 0", condition="(nx != 0) or (ny != 0)")
 problem.add_bc("right(w) = 0")
@@ -123,13 +127,15 @@ rand = np.random.RandomState(seed=23)
 noise = rand.standard_normal(gshape)[slices]
 # Linear background + perturbations damped at walls
 zb, zt = z_basis.interval
-b['g'] = 1e-3 * noise * (zt - z) * (z - zb)
+b['g'] = 1e-3 * noise
+b.set_scales(1/2)
+b['g']
 b.differentiate('z', out=bz)
 
 # Analysis
-checkpoints = solver.evaluator.add_file_handler('checkpoints', sim_dt=100, max_writes=1)
+checkpoints = solver.evaluator.add_file_handler('checkpoints', sim_dt=checkpoints_sim_dt, max_writes=1)
 checkpoints.add_system(solver.state)
-slices = solver.evaluator.add_file_handler('slices', sim_dt=10, max_writes=10)
+slices = solver.evaluator.add_file_handler('slices', sim_dt=slices_sim_dt, max_writes=10)
 for field in ['b', 'u', 'v', 'w', 'ωz']:
     for loc in ['x=0', 'y=0', "z='left'", "z='center'", "z='right'"]:
         slices.add_task(f"interp({field}, {loc})")
