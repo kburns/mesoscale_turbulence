@@ -1,6 +1,6 @@
 
 # Control parameters
-Nx, Ny, Nz = 256, 256, 64
+Nx, Ny, Nz = 512, 512, 32
 mesh = (16, 12)
 A = 1000 # Aspect ratio: L / H
 An = 3e4 # Diffusion anisotrophy: κh / κv
