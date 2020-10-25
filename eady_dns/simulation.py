@@ -102,7 +102,7 @@ b['g']
 b.differentiate('z', out=bz)
 
 # Analysis
-checkpoints = solver.evaluator.add_file_handler('checkpoints', sim_dt=checkpoints_sim_dt, max_writes=1)
+checkpoints = solver.evaluator.add_file_handler('checkpoints', wall_dt=checkpoints_wall_dt, max_writes=1)
 checkpoints.add_system(solver.state)
 slices = solver.evaluator.add_file_handler('slices', sim_dt=slices_sim_dt, max_writes=10)
 for field in ['b', 'u', 'v', 'w', 'ωz']:
@@ -110,8 +110,8 @@ for field in ['b', 'u', 'v', 'w', 'ωz']:
         slices.add_task(f"interp({field}, {loc})")
 
 # CFL
-CFL = flow_tools.CFL(solver, initial_dt=max_dt, cadence=5, safety=0.5,
-                     max_change=1.5, min_change=0.5, max_dt=max_dt)
+CFL = flow_tools.CFL(solver, initial_dt=max_dt, cadence=10, safety=safety,
+                     max_change=1.5, min_change=0.5, max_dt=max_dt, threshold=0.05)
 CFL.add_velocities(('u', 'v', 'w'))
 
 # Main loop

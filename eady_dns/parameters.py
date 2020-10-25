@@ -11,9 +11,10 @@ Ri = 1000 / Ro**2 # Richardson number: N^2 / S^2
 D1 = 0.0016 # Linear drag parameter: k1 / f H
 D2 = 0 # Quadratic drag parameter: k2
 timestepper = "RK222"
+safety = 0.5
 stop_sim_time = 50000
 max_dt = 10
-checkpoints_sim_dt = 10000
+checkpoints_wall_dt = 59*60
 slices_sim_dt = 100
 
 # Fixed parameters
