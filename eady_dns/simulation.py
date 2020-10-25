@@ -45,6 +45,7 @@ problem.parameters['S'] = S
 problem.parameters['N2'] = N2
 problem.parameters['k1'] = k1
 problem.parameters['k2'] = k2
+problem.parameters['kp'] = kp
 problem.substitutions['u0'] = "S * z"
 problem.substitutions['u0z'] = "S"
 problem.substitutions['b0y'] = "- f * S"
@@ -77,7 +78,7 @@ problem.add_bc("left(νv*uz - k1*u) = k2*left_mag_u*left(u)")
 problem.add_bc("right(uz) = 0")
 problem.add_bc("left(νv*vz - k1*v) = k2*left_mag_u*left(v)")
 problem.add_bc("right(vz) = 0")
-problem.add_bc("left(w) = 0", condition="(nx != 0) or (ny != 0)")
+problem.add_bc("left(w - kp*ωz) = 0", condition="(nx != 0) or (ny != 0)")
 problem.add_bc("right(w) = 0")
 problem.add_bc("right(p) = 0", condition="(nx == 0) and (ny == 0)")
 
