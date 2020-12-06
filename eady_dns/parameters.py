@@ -17,6 +17,7 @@ stop_sim_time = 50000
 max_dt = 10
 checkpoints_wall_dt = 59*60
 slices_sim_dt = 100
+scalars_sim_dt = 100
 
 # Fixed parameters
 H = 1 # Domain height

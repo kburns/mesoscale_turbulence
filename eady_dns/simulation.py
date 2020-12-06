@@ -36,6 +36,8 @@ x, y, z = domain.all_grids()
 
 # Problem
 problem = de.IVP(domain, variables=['p','b','u','v','w','bz','uz','vz','wz'])
+problem.parameters['L'] = L
+problem.parameters['H'] = H
 problem.parameters['κh'] = κh
 problem.parameters['κv'] = κv
 problem.parameters['νh'] = νh
@@ -61,8 +63,13 @@ problem.substitutions['vx'] = "dx(v)"
 problem.substitutions['vy'] = "dy(v)"
 problem.substitutions['wx'] = "dx(w)"
 problem.substitutions['wy'] = "dy(w)"
+problem.substitutions['ωx'] = "wy - vz"
+problem.substitutions['ωy'] = "uz - wx"
 problem.substitutions['ωz'] = "vx - uy"
+problem.substitutions['E'] = "(u*u + v*v + w*w) / 2"
+problem.substitutions['Z'] = "(ωx*ωx + ωy*ωy + ωz*ωz) / 2"
 problem.substitutions['left_mag_u'] = "sqrt(left(u)**2 + left(v)**2)"
+problem.substitutions['ave(A)'] = "integ(A)/(L*L*H)"
 problem.add_equation("ux + vy + wz = 0")
 problem.add_equation("dt(b) - κh*(dx(bx) + dy(by)) - κv*dz(bz) + u0*bx + v*b0y + w*b0z    = - (u*bx + v*by + w*bz)")
 problem.add_equation("dt(u) - νh*(dx(ux) + dy(uy)) - νv*dz(uz) + px - f*v + u0*ux + w*u0z = - (u*ux + v*uy + w*uz)")
@@ -97,7 +104,7 @@ rand = np.random.RandomState(seed=23)
 noise = rand.standard_normal(gshape)[slices]
 # Linear background + perturbations damped at walls
 zb, zt = z_basis.interval
-b['g'] = 1e-3 * noise
+b['g'] = 0.1 * noise
 b.set_scales(1/2)
 b['g']
 b.differentiate('z', out=bz)
@@ -109,11 +116,22 @@ slices = solver.evaluator.add_file_handler('slices', sim_dt=slices_sim_dt, max_w
 for field in ['b', 'u', 'v', 'w', 'ωz']:
     for loc in ['x=0', 'y=0', "z='left'", "z='center'", "z='right'"]:
         slices.add_task(f"interp({field}, {loc})")
+scalars = solver.evaluator.add_file_handler('scalars', sim_dt=scalars_sim_dt, max_writes=100)
+scalars.add_task("ave(E)", name="<E>")
+scalars.add_task("ave(Z)", name="<Z>")
+scalars.add_task("ave(b*v)", name="<vb>")
+scalars.add_task("ave(right(b) - left(b))", name="<bz>_1")
+scalars.add_task("ave(bz)", name="<bz>_2")
 
 # CFL
 CFL = flow_tools.CFL(solver, initial_dt=max_dt, cadence=10, safety=safety,
                      max_change=1.5, min_change=0.5, max_dt=max_dt, threshold=0.05)
 CFL.add_velocities(('u', 'v', 'w'))
+
+# Flow properties
+flow = flow_tools.GlobalFlowProperty(solver, cadence=100)
+flow.add_property("ave(E)", name='<E>')
+
 
 # Main loop
 end_init_time = time.time()
@@ -126,6 +144,7 @@ try:
         solver.step(dt)
         if (solver.iteration-1) % 100 == 0:
             logger.info('Iteration: %i, Time: %e, dt: %e' %(solver.iteration, solver.sim_time, dt))
+            logger.info('<E> = %.2e' %flow.max('<E>'))
 except:
     logger.error('Exception raised, triggering end of main loop.')
     raise
