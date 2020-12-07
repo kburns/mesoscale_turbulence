@@ -18,6 +18,9 @@ max_dt = 10
 checkpoints_wall_dt = 59*60
 slices_sim_dt = 100
 scalars_sim_dt = 100
+init_amp = 1
+init_kmax = 64
+init_rank = 16
 
 # Fixed parameters
 H = 1 # Domain height
